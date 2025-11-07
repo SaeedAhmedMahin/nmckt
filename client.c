@@ -59,30 +59,52 @@ int main(int argc, char *argv[]) {
     }
 
     while (logged_in) {
-        printf("You: ");
-        if (!fgets(buf, BUF, stdin)) break;
-
-        // remove trailing newline
-        size_t len = strlen(buf);
-        if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
-
-        // send to server
-        conn_write(srv, buf, (unsigned int) strlen(buf));
-
-        // check for quit command
-        if (strcmp(buf, ":q") == 0) break;
-
-        // read server reply
-        ssize_t n = conn_read(srv, buf, (unsigned int) (BUF - 1));
-        if (n > 0) {
-            buf[n] = '\0';
-            printf("Server: %s\n", buf);
-        } else if (n == 0) {
-            printf("Server closed the connection.\n");
-            break;
-        } else {
-            perror("conn_read");
-            break;
+        
+        printf("You:");
+        if (fgets(buf, BUF, stdin)){
+            
+            if(strncmp(buf, "/", 1) == 0){
+                if (strncmp(buf, "/global", 7) == 0){
+                    global_chat = 1;
+                    
+                    FILE *fp_global_chat = fopen("./DB/global.txt", "r");
+                    if (!fp_global_chat) {
+                        perror("Error: Failed to open chat databae");
+                        return 0;
+                    }
+                    char line[BUF];
+                    printf("/***********-------Entering Global Chat-------***********\n");
+                    while (fgets(line, sizeof(line), fp_global_chat)) {
+                        printf("%s", line);
+                    }
+                    printf("\n");
+                    fclose(fp_global_chat);
+                }
+            }else{
+                size_t len = strlen(buf);
+                if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+                
+                // send to server
+                conn_write(srv, buf, (unsigned int) strlen(buf));
+                
+                // check for quit command
+                if (strcmp(buf, ":q") == 0) break;
+                
+                // read server reply
+                ssize_t n = conn_read(srv, buf, (unsigned int) (BUF - 1));
+                if (n > 0) {
+                buf[n] = '\0';
+                printf("Server: %s\n", buf);
+                } else if (n == 0) {
+                printf("Server closed the connection.\n");
+                break;
+                } else {
+                    perror("conn_read");
+                    break;
+                }
+            }
+            
+            
         }
     }
 
