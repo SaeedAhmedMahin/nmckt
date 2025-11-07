@@ -30,18 +30,28 @@ char active_users[100][20];
 
 int verify_login(char *username, char *password) {
     FILE *fp_user_data = fopen("./DB/users.txt", "r");
-    if (!fp_user_data) {
+    FILE *fp = fopen("./DB/active_users.txt", "a");
+    if (!fp_user_data || !fp) {
         perror("Error opening user files");
         return 0;
     }
+    
+    if (fprintf(fp, "%s\n",username) < 0) {
+        perror("Error: Failed to write to active list");
+        fclose(fp);
+        return 0;
+    }
+    fflush(fp);
+    fclose(fp);
+    
     char name[BUF], pass[BUF];
     int id;
     
     // ACTIVE USERS LOGIC
     while (fscanf(fp_user_data, "%d %s %s", &id, name, pass) == 3) {
         if (strcmp(username, name) == 0 && strcmp(password, pass) == 0) {
-            strcpy(active_users[no_of_active_users], name );
-            no_of_active_users++;
+            //strcpy(active_users[no_of_active_users], name );
+//          no_of_active_users++;
             fclose(fp_user_data);
             return 1;
         }
@@ -152,6 +162,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Server served %u clients, shutting down.\n", MAX_CLIENTS);
+    
     listener_close(listenfd);
     return 0;
 }

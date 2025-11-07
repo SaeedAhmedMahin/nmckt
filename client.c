@@ -1,9 +1,64 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+
 #include "net_helper.h" // or #include "net_helper_basic.h"
 
 #define BUF 512
+
+// Like whatsapp locally stored
+char username[BUF];
+int global_chat = 1;
+char path_global[100] = "./DB/global.txt";
+char *path = NULL;
+char *path2 = NULL;
+
+
+void load_history(char path[100]){
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        perror("Error: Failed to open chat database");
+        return;
+    }
+    char line[BUF];
+    printf("/***********-------Previous Chat-------***********\n");
+    while (fgets(line, sizeof(line), fp)) {
+        printf("%s", line);
+    }
+    printf("\n");
+    fclose(fp);
+   
+}
+
+
+
+static pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void write_to_DB(char path[100], char line[256]) {
+    // Threading
+    pthread_mutex_lock(&db_mutex);
+
+    FILE *fp = fopen(path, "a");
+    if (!fp) {
+        perror("Error: Failed to open chat database");
+        pthread_mutex_unlock(&db_mutex);  // unlock before returning
+        return;
+    }
+
+    if (fprintf(fp, "%s: %s\n",username, line) < 0) {
+        perror("Error: Failed to write to chat database");
+        fclose(fp);
+        pthread_mutex_unlock(&db_mutex);
+        return;
+    }
+
+    fflush(fp);
+    fclose(fp);
+
+    // Unlock after done
+    pthread_mutex_unlock(&db_mutex);
+}
 
 int main(int argc, char *argv[]) {
     if(argc != 3) {
@@ -32,7 +87,7 @@ int main(int argc, char *argv[]) {
     char buf[BUF];
     int logged_in = 0;
     while(!logged_in){
-        char username[BUF], password[BUF];
+        char  password[BUF];
         printf("Enter username: ");
         if (!fgets(username, BUF, stdin)) break;
         username[strcspn(username, "\n")] = '\0';
@@ -60,41 +115,57 @@ int main(int argc, char *argv[]) {
 
     while (logged_in) {
         
-        printf("You:");
+        
+        printf("%s:", username);
         if (fgets(buf, BUF, stdin)){
-            
+            size_t len = strlen(buf);
+            if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+            x d
             if(strncmp(buf, "/", 1) == 0){
                 if (strncmp(buf, "/global", 7) == 0){
                     global_chat = 1;
+
+                }
+                else{
+                    global_chat = 0;
+                    char *to = strtok(buf, "/");
                     
-                    FILE *fp_global_chat = fopen("./DB/global.txt", "r");
-                    if (!fp_global_chat) {
-                        perror("Error: Failed to open chat databae");
+                        if (asprintf(&path, "./DB/chats/%s/%s.txt", username, to) == -1) {
+                            perror("asprintf");
+                            return 0;
+                        }
+                    if (asprintf(&path2, "./DB/chats/%s/%s.txt", to, username) == -1) {
+                        perror("asprintf");
                         return 0;
                     }
-                    char line[BUF];
-                    printf("/***********-------Entering Global Chat-------***********\n");
-                    while (fgets(line, sizeof(line), fp_global_chat)) {
-                        printf("%s", line);
-                    }
-                    printf("\n");
-                    fclose(fp_global_chat);
+                    load_history(path);
+
                 }
-            }else{
-                size_t len = strlen(buf);
-                if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
-                
+            }
+            
+            
+            
+        else {
+            // check for quit command
+            if (strcmp(buf, ":q") == 0) break;
                 // send to server
-                conn_write(srv, buf, (unsigned int) strlen(buf));
+            if (global_chat){
+                write_to_DB(path_global,buf);
                 
-                // check for quit command
-                if (strcmp(buf, ":q") == 0) break;
+                }
+            else{
+                write_to_DB(path,buf);
+                write_to_DB(path2,buf);
+            }
+            conn_write(srv, buf, (unsigned int) strlen(buf));
+                
+               
                 
                 // read server reply
                 ssize_t n = conn_read(srv, buf, (unsigned int) (BUF - 1));
                 if (n > 0) {
                 buf[n] = '\0';
-                printf("Server: %s\n", buf);
+               
                 } else if (n == 0) {
                 printf("Server closed the connection.\n");
                 break;
@@ -107,6 +178,7 @@ int main(int argc, char *argv[]) {
             
         }
     }
+        
 
     conn_close(srv);
     printf("Disconnected from server.\n");
