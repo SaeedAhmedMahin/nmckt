@@ -10,7 +10,6 @@ char messages[100][4][50];
 char username_code[3] = {'1','0','1'};
 
 int no_of_active_users = 0;
-
 char active_users[100][20];
 
     /* copy the literals into the buffers */
@@ -28,31 +27,30 @@ char active_users[100][20];
 //    }
 
 
+// LOGIN  + ACTIVE USERS LOGIC
 int verify_login(char *username, char *password) {
     FILE *fp_user_data = fopen("./DB/users.txt", "r");
-    FILE *fp = fopen("./DB/active_users.txt", "a");
-    if (!fp_user_data || !fp) {
+    FILE *fp_active_users = fopen("./DB/active_users.txt", "w");
+    if (!fp_user_data || !fp_active_users) {
         perror("Error opening user files");
         return 0;
     }
     
-    if (fprintf(fp, "%s\n",username) < 0) {
-        perror("Error: Failed to write to active list");
-        fclose(fp);
-        return 0;
-    }
-    fflush(fp);
-    fclose(fp);
-    
+
     char name[BUF], pass[BUF];
     int id;
     
     // ACTIVE USERS LOGIC
     while (fscanf(fp_user_data, "%d %s %s", &id, name, pass) == 3) {
         if (strcmp(username, name) == 0 && strcmp(password, pass) == 0) {
-            //strcpy(active_users[no_of_active_users], name );
-//          no_of_active_users++;
+            strcpy(active_users[no_of_active_users], name );
+            no_of_active_users++;
+            // Add to active users File
+            for (int i = 0; i < no_of_active_users; i++) {
+                    fprintf(fp_active_users, "%s\n", active_users[i]);
+                }
             fclose(fp_user_data);
+            fclose(fp_active_users);
             return 1;
         }
     }

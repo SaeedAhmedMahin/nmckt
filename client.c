@@ -7,12 +7,14 @@
 
 #define BUF 512
 
-// Like whatsapp locally stored
+// Like whatsapp, locally stored chat info
 char username[BUF];
 int global_chat = 1;
 char path_global[100] = "./DB/global.txt";
 char *path = NULL;
 char *path2 = NULL;
+
+
 
 
 void load_history(char path[100]){
@@ -118,65 +120,95 @@ int main(int argc, char *argv[]) {
         
         printf("%s:", username);
         if (fgets(buf, BUF, stdin)){
-            size_t len = strlen(buf);
-            if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
-            x d
-            if(strncmp(buf, "/", 1) == 0){
-                if (strncmp(buf, "/global", 7) == 0){
-                    global_chat = 1;
+                size_t len = strlen(buf);
+                if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+               
+                if (strncmp(buf, "/", 1) == 0){
+                    if (strncmp(buf, "/global", 7) == 0){
+                        global_chat = 1;
+                        load_history(path_global);
 
-                }
-                else{
-                    global_chat = 0;
-                    char *to = strtok(buf, "/");
-                    
-                        if (asprintf(&path, "./DB/chats/%s/%s.txt", username, to) == -1) {
+                    }
+                    else if (strncmp(buf, "/active", 7) == 0){
+                        // LOAD ACTIVE USERS
+                        FILE *fp_active_users = fopen("./DB/active_users.txt", "r");
+                        if (!fp_active_users) {
+                            perror("Error opening user files");
+                            return 0;
+                        }
+                        int no_of_active_users = 0;
+                        char active_users[100][20];
+                        while (fgets(active_users[no_of_active_users], sizeof(active_users[no_of_active_users]), fp_active_users)) {
+                                // remove newline if present
+                                active_users[no_of_active_users][strcspn(active_users[no_of_active_users], "\n")] = '\0';
+                                no_of_active_users++;
+                            }
+
+                        fclose(fp_active_users);
+
+                            // print active users
+                        if (no_of_active_users == 1){
+                            printf("1 Active User: [ %s ]\n", username);
+                        }
+                        else{
+                            printf("%d Active Users: [", no_of_active_users);
+                            for (int i = 0; i < no_of_active_users; i++) {
+                                printf(" %s", active_users[i]);
+                            }
+                            printf(" ]\n" );
+                        }
+                        
+                        
+                    }
+                    else{
+                        global_chat = 0;
+                        char *to = strtok(buf, "/");
+                        
+                            if (asprintf(&path, "./DB/chats/%s/%s.txt", username, to) == -1) {
+                                perror("asprintf");
+                                return 0;
+                            }
+                        if (asprintf(&path2, "./DB/chats/%s/%s.txt", to, username) == -1) {
                             perror("asprintf");
                             return 0;
                         }
-                    if (asprintf(&path2, "./DB/chats/%s/%s.txt", to, username) == -1) {
-                        perror("asprintf");
-                        return 0;
-                    }
-                    load_history(path);
+                        load_history(path);
 
+                    }
                 }
-            }
-            
-            
-            
-        else {
-            // check for quit command
-            if (strcmp(buf, ":q") == 0) break;
-                // send to server
-            if (global_chat){
-                write_to_DB(path_global,buf);
-                
+                else {
+                    // check for quit command
+                    if (strcmp(buf, ":q") == 0) break;
+                        // send to server
+                    if (global_chat){
+                        write_to_DB(path_global,buf);
+                        
+                        }
+                    else{
+                        write_to_DB(path,buf);
+                        write_to_DB(path2,buf);
+                    }
+                    conn_write(srv, buf, (unsigned int) strlen(buf));
+                        
+                       
+                        
+                        // read server reply
+                        ssize_t n = conn_read(srv, buf, (unsigned int) (BUF - 1));
+                        if (n > 0) {
+                        buf[n] = '\0';
+                       
+                        } else if (n == 0) {
+                        printf("Server closed the connection.\n");
+                        break;
+                        } else {
+                            perror("conn_read");
+                            break;
+                        }
+                    }
+                    
+                    
                 }
-            else{
-                write_to_DB(path,buf);
-                write_to_DB(path2,buf);
-            }
-            conn_write(srv, buf, (unsigned int) strlen(buf));
-                
-               
-                
-                // read server reply
-                ssize_t n = conn_read(srv, buf, (unsigned int) (BUF - 1));
-                if (n > 0) {
-                buf[n] = '\0';
-               
-                } else if (n == 0) {
-                printf("Server closed the connection.\n");
-                break;
-                } else {
-                    perror("conn_read");
-                    break;
-                }
-            }
             
-            
-        }
     }
         
 
