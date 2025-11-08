@@ -13,11 +13,12 @@ int global_chat = 1;
 char path_global[100] = "./DB/global.txt";
 char *path = NULL;
 char *path2 = NULL;
-
+char *history[BUF];
 
 
 
 void load_history(char path[100]){
+    int i = 0;
     FILE *fp = fopen(path, "r");
     if (!fp) {
         perror("Error: Failed to open chat database");
@@ -26,7 +27,10 @@ void load_history(char path[100]){
     char line[BUF];
     printf("/***********-------Previous Chat-------***********\n");
     while (fgets(line, sizeof(line), fp)) {
+        
         printf("%s", line);
+        history[i] = line;
+        i++;
     }
     printf("\n");
     fclose(fp);
