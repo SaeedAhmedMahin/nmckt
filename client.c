@@ -182,11 +182,13 @@ int main(int argc, char *argv[]) {
                         // send to server
                     if (global_chat){
                         write_to_DB(path_global,buf);
+                        load_history(path_global);
                         
                         }
                     else{
                         write_to_DB(path,buf);
                         write_to_DB(path2,buf);
+                        load_history(path);
                     }
                     conn_write(srv, buf, (unsigned int) strlen(buf));
                         

@@ -8,6 +8,7 @@ typedef struct Connection {
     int fd;
     char peer_ip[46];
     uint16_t peer_port;
+    char username[20];
 } Connection;
 
 int listener_create(const char *ip, uint16_t port);

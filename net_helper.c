@@ -16,6 +16,7 @@ typedef struct Connection {
     int fd;                      // socket file descriptor
     char peer_ip[INET6_ADDRSTRLEN]; // End point of connection ip
     uint16_t peer_port;             // ||                      port
+    char username[20];
 } Connection;
 
 /* Create a listening socket.
