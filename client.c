@@ -2,10 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <ncurses.h>
+#include <menu.h>
 
 #include "net_helper.h" // or #include "net_helper_basic.h"
 
 #define BUF 512
+#define ARRAY_SIZE(arr) / sizeof((arr)[0])
+
 
 // Like whatsapp, locally stored chat info
 char username[BUF];
@@ -14,6 +18,10 @@ char path_global[100] = "./DB/global.txt";
 char *path = NULL;
 char *path2 = NULL;
 char *history[BUF];
+
+
+WINDOW *create_newwin(int height, int width, int starty, int startx);
+
 
 
 
@@ -67,6 +75,21 @@ void write_to_DB(char path[100], char line[256]) {
 }
 
 int main(int argc, char *argv[]) {
+    WINDOW *users;
+    WINDOW *wchat;
+    WINDOW *winp;
+    WINDOW *vwinp;
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    users = create_newwin(LINES * 0.7, COLS/8, 2, 1);
+    wchat = create_newwin(LINES * 0.7, COLS * (6.5/8), 2, COLS/7.4);
+    winp = newwin(LINES * 0.2 - 2, COLS * (6.5/8) - 2, LINES * 0.73 + 1 , COLS/7.4 + 1);
+    vwinp = create_newwin(LINES * 0.2, COLS * (6.5/8), LINES * 0.73, COLS/7.4);
+
+
+    
     if(argc != 3) {
         fprintf(stderr, "Usage: %s <server_ip> <port>\n", argv[0]);
         fprintf(stderr, "Example to run client in terminal:\n");
@@ -87,14 +110,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Connected to server %s:%u\n", server_ip, port);
-    printf("Type ':q' to quit.\n");
-
+    mvwprintw(wchat, 1, 1, "Connected to server %s:%u\n", server_ip, port);
+    mvwprintw(wchat, 2, 1, "Type ':q' to quit.\n");
+    wrefresh(wchat);
     char buf[BUF];
     int logged_in = 0;
     while(!logged_in){
         char  password[BUF];
-        printf("Enter username: ");
+        mvwprintw(wchat, 3, 1, "Enter User Name: ");
+        wrefresh(wchat);
         if (!fgets(username, BUF, stdin)) break;
         username[strcspn(username, "\n")] = '\0';
 
@@ -120,8 +144,7 @@ int main(int argc, char *argv[]) {
     }
 
     while (logged_in) {
-        
-        
+       
         printf("%s:", username);
         if (fgets(buf, BUF, stdin)){
                 size_t len = strlen(buf);
@@ -217,8 +240,21 @@ int main(int argc, char *argv[]) {
             
     }
         
+    endwin();
 
     conn_close(srv);
     printf("Disconnected from server.\n");
     return 0;
+}
+
+WINDOW *create_newwin(int height, int width, int starty, int startx)
+{
+    WINDOW *local_win;
+
+    local_win = newwin(height, width, starty, startx);
+    box(local_win, 0, 0);
+
+    wrefresh(local_win);
+
+    return local_win;
 }
